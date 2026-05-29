@@ -12,11 +12,31 @@ from dateutil import parser
 import pytz
 import subprocess
 import sys
+import json
+from google.oauth2 import credentials as oauth2_credentials
 
 # Configuración
 PROJECT_ID = 'mo-customer-ops-reporting'
 DATASET_ID = 'ZZ_WORK'
 TABLE_ID = 'SCHEDULED_QUERIES_BACKUP'
+
+# Configurar credenciales desde Streamlit secrets
+def get_bigquery_client_cached():
+    """Obtiene cliente de BigQuery con credenciales de Streamlit secrets"""
+    try:
+        # Intentar usar secrets de Streamlit (en cloud)
+        creds_dict = dict(st.secrets["gcp_credentials"])
+        creds = oauth2_credentials.Credentials(
+            token=None,
+            refresh_token=creds_dict.get("refresh_token"),
+            token_uri=creds_dict.get("token_uri", "https://oauth2.googleapis.com/token"),
+            client_id=creds_dict.get("client_id"),
+            client_secret=creds_dict.get("client_secret")
+        )
+        return bigquery.Client(project=PROJECT_ID, credentials=creds)
+    except:
+        # Fallback a credenciales locales (desarrollo local)
+        return bigquery.Client(project=PROJECT_ID)
 
 # Configurar la página
 st.set_page_config(
@@ -142,9 +162,9 @@ st.markdown("""
 
 
 @st.cache_resource
-def get_bigquery_client():
+def get_bigquery_client_cached():
     """Obtener cliente de BigQuery (cacheado)"""
-    return bigquery.Client(project=PROJECT_ID)
+    return get_bigquery_client_cached()
 
 
 def convertir_utc_a_madrid(fecha_str):
@@ -172,7 +192,7 @@ def convertir_utc_a_madrid(fecha_str):
 @st.cache_data(ttl=300)  # Cache por 5 minutos
 def cargar_queries():
     """Cargar todas las queries desde BigQuery"""
-    client = get_bigquery_client()
+    client = get_bigquery_client_cached()
 
     query = f"""
     SELECT
@@ -198,7 +218,7 @@ def cargar_queries():
 
 def ejecutar_query(query_name):
     """Ejecutar una query específica"""
-    client = get_bigquery_client()
+    client = get_bigquery_client_cached()
 
     try:
         # Llamar al procedimiento almacenado
@@ -304,43 +324,12 @@ def main():
             ""
         )
 
-        # Botón para refrescar DESDE BIGQUERY (ejecuta scripts de actualización)
-        if st.sidebar.button("🔄 Refrescar desde BigQuery", key="btn_refresh"):
+        # Botón para refrescar caché (en cloud solo limpia caché, en local ejecuta scripts)
+        if st.sidebar.button("🔄 Refrescar datos", key="btn_refresh"):
             with st.sidebar:
-                with st.spinner("Actualizando datos desde BigQuery..."):
-                    try:
-                        # Paso 1: Exportar datos frescos
-                        st.info("⏳ Paso 1/3: Exportando scheduled queries (puede tardar 2-3 min)...")
-                        result1 = subprocess.run(
-                            [sys.executable, r"C:\Users\luis.figueredo\exportar_con_ultima_ejecucion_real.py"],
-                            capture_output=True,
-                            text=True,
-                            timeout=300
-                        )
-
-                        if result1.returncode != 0:
-                            st.error(f"Error en exportación: {result1.stderr[:200]}")
-                        else:
-                            st.success("✅ Paso 1 completado")
-
-                        # Paso 2: Cargar a BigQuery
-                        st.info("⏳ Paso 2/3: Cargando datos a BigQuery...")
-                        result2 = subprocess.run(
-                            [sys.executable, r"C:\Users\luis.figueredo\almacenar_queries_en_bq.py"],
-                            capture_output=True,
-                            text=True,
-                            timeout=120
-                        )
-
-                        if result2.returncode != 0:
-                            st.error(f"Error en carga: {result2.stderr[:200]}")
-                        else:
-                            st.success("✅ Paso 2 completado")
-
-                        # Paso 3: Limpiar caché
-                        st.info("⏳ Paso 3/3: Limpiando caché...")
-                        st.cache_data.clear()
-                        st.success("✅ Datos actualizados correctamente!")
+                st.cache_data.clear()
+                st.success("✅ Caché limpiada. Los datos se actualizarán en la próxima carga.")
+                st.info("ℹ️ Nota: En Streamlit Cloud, los datos se actualizan desde BigQuery directamente.")
 
                         time.sleep(1)
                         st.rerun()
