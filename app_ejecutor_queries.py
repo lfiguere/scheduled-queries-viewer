@@ -26,17 +26,25 @@ def get_bigquery_client_cached():
     """Obtiene cliente de BigQuery con credenciales de Streamlit secrets"""
     try:
         # Intentar usar secrets de Streamlit (en cloud)
+        from google.auth.transport.requests import Request
+
         creds_dict = dict(st.secrets["gcp_credentials"])
         creds = oauth2_credentials.Credentials(
             token=None,
-            refresh_token=creds_dict.get("refresh_token"),
-            token_uri=creds_dict.get("token_uri", "https://oauth2.googleapis.com/token"),
-            client_id=creds_dict.get("client_id"),
-            client_secret=creds_dict.get("client_secret")
+            refresh_token=creds_dict["refresh_token"],
+            token_uri=creds_dict["token_uri"],
+            client_id=creds_dict["client_id"],
+            client_secret=creds_dict["client_secret"],
+            scopes=["https://www.googleapis.com/auth/bigquery"]
         )
+
+        # Refrescar el token
+        creds.refresh(Request())
+
         return bigquery.Client(project=PROJECT_ID, credentials=creds)
-    except:
+    except Exception as e:
         # Fallback a credenciales locales (desarrollo local)
+        st.warning(f"Usando credenciales locales: {str(e)}")
         return bigquery.Client(project=PROJECT_ID)
 
 # Configurar la página
