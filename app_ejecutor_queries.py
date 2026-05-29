@@ -1,6 +1,7 @@
 """
 Aplicación Web para ejecutar Scheduled Queries bajo demanda
 Interfaz visual con botones de ejecución
+Versión: 1.0
 """
 
 import streamlit as st
