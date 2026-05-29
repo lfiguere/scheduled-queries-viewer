@@ -326,18 +326,10 @@ def main():
 
         # Botón para refrescar caché (en cloud solo limpia caché, en local ejecuta scripts)
         if st.sidebar.button("🔄 Refrescar datos", key="btn_refresh"):
-            with st.sidebar:
-                st.cache_data.clear()
-                st.success("✅ Caché limpiada. Los datos se actualizarán en la próxima carga.")
-                st.info("ℹ️ Nota: En Streamlit Cloud, los datos se actualizan desde BigQuery directamente.")
-
-                        time.sleep(1)
-                        st.rerun()
-
-                    except subprocess.TimeoutExpired:
-                        st.error("⏱️ Timeout: La actualización tardó demasiado. Intenta de nuevo.")
-                    except Exception as e:
-                        st.error(f"❌ Error: {str(e)}")
+            st.cache_data.clear()
+            st.success("✅ Caché limpiada. Los datos se actualizarán en la próxima carga.")
+            time.sleep(1)
+            st.rerun()
 
         # Aplicar filtros
         df_filtrado = df.copy()
