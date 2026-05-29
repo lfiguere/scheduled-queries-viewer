@@ -193,28 +193,33 @@ def convertir_utc_a_madrid(fecha_str):
 @st.cache_data(ttl=300)  # Cache por 5 minutos
 def cargar_queries():
     """Cargar todas las queries desde BigQuery"""
-    client = get_bigquery_client_cached()
+    try:
+        client = get_bigquery_client_cached()
 
-    query = f"""
-    SELECT
-        query_name,
-        user_id,
-        tipo,
-        schedule,
-        dataset_destino,
-        activa,
-        num_calls,
-        procedimientos,
-        sql_query,
-        fecha_backup,
-        estado_original,
-        ultima_ejecucion_original
-    FROM `{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}`
-    ORDER BY query_name
-    """
+        query = f"""
+        SELECT
+            query_name,
+            user_id,
+            tipo,
+            schedule,
+            dataset_destino,
+            activa,
+            num_calls,
+            procedimientos,
+            sql_query,
+            fecha_backup,
+            estado_original,
+            ultima_ejecucion_original
+        FROM `{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}`
+        ORDER BY query_name
+        """
 
-    df = client.query(query).to_dataframe()
-    return df
+        df = client.query(query).to_dataframe()
+        return df
+    except Exception as e:
+        st.error(f"Error cargando datos desde BigQuery: {str(e)}")
+        st.info("Verifica que las credenciales estén configuradas correctamente en Secrets.")
+        return pd.DataFrame()
 
 
 def ejecutar_query(query_name):
