@@ -1,0 +1,32 @@
+# Credenciales (NO SUBIR)
+*.json
+credentials.json
+application_default_credentials.json
+
+# Archivos de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+*.egg-info/
+
+# Archivos de datos locales
+*.xlsx
+*.xls
+*.csv
+
+# Streamlit
+.streamlit/secrets.toml
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema
+.DS_Store
+Thumbs.db
